@@ -1,0 +1,10 @@
+[
+  {"ParameterKey": "pNotifyEmail","ParameterValue": "djtrainer808@gmail.com"},
+  {"ParameterKey": "pEC2KeyPairBastion","ParameterValue": "myBastionKeyPair"},
+  {"ParameterKey": "pEC2KeyPair","ParameterValue": "myInstanceKeyPair"},
+  {"ParameterKey": "pSupportsConfig","ParameterValue": "false"},
+  {"ParameterKey": "pAvailabilityZoneA","ParameterValue": "us-east-1a"},
+  {"ParameterKey": "pAvailabilityZoneB","ParameterValue": "us-east-1b"},
+  {"ParameterKey": "pVPCTenancy","ParameterValue": "default"},
+  {"ParameterKey": "pMyRxS3Bucket","ParameterValue": "my-rx-bucket"}
+]
