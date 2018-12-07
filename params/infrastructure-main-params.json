@@ -6,5 +6,5 @@
   {"ParameterKey": "pAvailabilityZoneA","ParameterValue": "us-east-1a"},
   {"ParameterKey": "pAvailabilityZoneB","ParameterValue": "us-east-1b"},
   {"ParameterKey": "pVPCTenancy","ParameterValue": "default"},
-  {"ParameterKey": "pMyRxS3Bucket","ParameterValue": "my-rx-bucket"}
+  {"ParameterKey": "pMyRxS3BucketName","ParameterValue": "my-rx-bucket"}
 ]

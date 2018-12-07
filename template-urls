@@ -1,6 +1,0 @@
-https://aws-quickstart.s3.amazonaws.com/quickstart-compliance-hipaa/submodules/quickstart-compliance-common/templates/iam.template
-https://aws-quickstart.s3.amazonaws.com/quickstart-compliance-hipaa/submodules/quickstart-compliance-common/templates/logging.template
-https://aws-quickstart.s3.amazonaws.com/quickstart-compliance-hipaa/submodules/quickstart-compliance-common/templates/vpc-production.template
-https://aws-quickstart.s3.amazonaws.com/quickstart-compliance-hipaa/submodules/quickstart-compliance-common/templates/vpc-management.template
-https://aws-quickstart.s3.amazonaws.com/quickstart-compliance-hipaa/templates/application.template
-https://aws-quickstart.s3.amazonaws.com/quickstart-compliance-hipaa/submodules/quickstart-compliance-common/templates/config-rules.template

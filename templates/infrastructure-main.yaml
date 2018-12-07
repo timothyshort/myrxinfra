@@ -378,7 +378,7 @@ Resources:
           - t2.small
         pSupportsNatGateway:
           !FindInMap
-         - RegionServiceSupport
+          - RegionServiceSupport
           - !Ref AWS::Region
           - NatGateway
         pNatAmi:
@@ -399,7 +399,7 @@ Resources:
     DependsOn:
     - IamTemplate
     - ProductionVpcTemplate
-#    - ManagementVpcTemplate
+    - ManagementVpcTemplate
     - LoggingTemplate
     Properties:
       TemplateURL: !Sub https://${pMyRxS3BucketName}.s3.amazonaws.com/templates/config-rules.yaml
