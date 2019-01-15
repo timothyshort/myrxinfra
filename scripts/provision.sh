@@ -47,5 +47,5 @@ echo "FINISHED PREPARING CONDA ENVIRONMENT"
 
 echo "******************"
 echo "RUN TEST SCRIPT"
-python test.py
+#python test.py
 echo "FINISHED RUNNING TEST SCRIPT"

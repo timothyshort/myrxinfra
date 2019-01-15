@@ -1,10 +1,10 @@
 [
-  {"ParameterKey": "pNotifyEmail","ParameterValue": "djtrainer808@gmail.com"},
-  {"ParameterKey": "pEC2KeyPairBastion","ParameterValue": "myBastionKeyPair"},
-  {"ParameterKey": "pEC2KeyPair","ParameterValue": "myInstanceKeyPair"},
+  {"ParameterKey": "pNotifyEmail","ParameterValue": "chironhealthsolutions@gmail.com"},
+  {"ParameterKey": "pEC2KeyPairBastion","ParameterValue": "myRxBastionKeyPair"},
+  {"ParameterKey": "pEC2KeyPair","ParameterValue": "myRxInstanceKeyPair"},
   {"ParameterKey": "pSupportsConfig","ParameterValue": "false"},
-  {"ParameterKey": "pAvailabilityZoneA","ParameterValue": "us-east-1a"},
-  {"ParameterKey": "pAvailabilityZoneB","ParameterValue": "us-east-1b"},
+  {"ParameterKey": "pAvailabilityZoneA","ParameterValue": "us-east-2a"},
+  {"ParameterKey": "pAvailabilityZoneB","ParameterValue": "us-east-2b"},
   {"ParameterKey": "pVPCTenancy","ParameterValue": "default"},
-  {"ParameterKey": "pMyRxS3BucketName","ParameterValue": "my-rx-bucket"}
+  {"ParameterKey": "pMyRxS3BucketName","ParameterValue": "chiron-cf-templates"}
 ]

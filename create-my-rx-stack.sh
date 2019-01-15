@@ -1,8 +1,14 @@
 #!/bin/bash
 set -ex
 
-export s3Bucket="my-rx-bucket"
-export stackName="myRxTestStack"
+export s3Bucket="chiron-cf-templates"
+export stackName="myRxStack"
+
+if aws iam get-role --role-name MyRxCodeDeployServiceRole 2>&1 | grep -q 'NoSuchEntity'
+then
+  aws iam create-role --role-name MyRxCodeDeployServiceRole --assume-role-policy-document file://scripts/codedeploy-iam.json
+  aws iam attach-role-policy --role-name MyRxCodeDeployServiceRole --policy-arn arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole
+fi
 
 if aws s3 ls "s3://${s3Bucket}" 2>&1 | grep -q 'NoSuchBucket'
 then
@@ -23,7 +29,7 @@ fi
 
 aws cloudformation validate-template --template-body "file://templates/infrastructure-main.yaml"
 
-aws cloudformation create-stack --stack-name ${stackName} --template-url "https://s3.amazonaws.com/${s3Bucket}/templates/infrastructure-main.yaml" --parameters file://params/infrastructure-main-params.json --capabilities CAPABILITY_NAMED_IAM
+aws cloudformation create-stack --stack-name ${stackName} --template-url "https://s3.amazonaws.com/${s3Bucket}/templates/infrastructure-main.yaml" --parameters file://params/infrastructure-main-params.json --disable-rollback --capabilities CAPABILITY_NAMED_IAM
 echo "Creating Stack $stackName..."
 aws cloudformation wait stack-create-complete --stack-name ${stackName}
 echo "Finished Creating Stack $stackName!"

@@ -114,22 +114,6 @@ Parameters:
     Description: Which App AMI do you want to use?
     Type: String
     Default: none
-#  pDBName:
-#    Description: Name of RDS Database
-#    Type: String
-#  pDBUser:
-#    Description: Username of DB Instance
-#    Type: String
-#  pDBPassword:
-#    Description: Password of DB Instance
-#    NoEcho: true
-#    Type: String
-#  pDBClass:
-#    Description: Instance class of RDS instance
-#    Type: String
-#  pDBAllocatedStorage:
-#    Description: Allocated Storage (in GB) for RDS instance
-#    Type: String
   pEnvironment:
     Description: Environment type (development, test, or production)
     Type: String
@@ -330,6 +314,14 @@ Resources:
       VpcId: !Ref pProductionVPC
       SecurityGroupIngress:
       - IpProtocol: tcp
+        FromPort: 8443
+        ToPort: 8443
+        CidrIp: !Ref pProductionCIDR
+      - IpProtocol: tcp
+        FromPort: 8080
+        ToPort: 8080
+        CidrIp: !Ref pProductionCIDR
+      - IpProtocol: tcp
         FromPort: 443
         ToPort: 443
         CidrIp: !Ref pProductionCIDR
@@ -342,6 +334,13 @@ Resources:
         ToPort: 22
         CidrIp: !Ref pManagementCIDR
       SecurityGroupEgress:
+      - IpProtocol: tcp
+        FromPort: 8443
+        ToPort: 8443
+        CidrIp: !Ref pProductionCIDR
+      - IpProtocol: tcp
+        FromPort: 8080
+        ToPort: 8080
       - IpProtocol: tcp
         FromPort: 80
         ToPort: 80
@@ -434,30 +433,6 @@ Resources:
           Condition:
             StringNotEquals:
               s3:x-amz-server-side-encryption: AES256
-  rDBSubnetGroup:
-    Type: AWS::RDS::DBSubnetGroup
-    Properties:
-      DBSubnetGroupDescription: MySQL RDS Subnet Group
-      SubnetIds:
-      - !Ref pDBPrivateSubnetA
-      - !Ref pDBPrivateSubnetB
-#  rRDSInstanceMySQL:
-#    Type: AWS::RDS::DBInstance
-#    DependsOn:
-#    - rDBSubnetGroup
-#    - rSecurityGroupRDS
-#    Properties:
-#      DBName: !Ref pDBName
-#      Engine: MySQL
-#      MultiAZ: true
-#      StorageEncrypted: true
-#      MasterUsername: !Ref pDBUser
-#      MasterUserPassword: !Ref pDBPassword
-#      DBInstanceClass: !Ref pDBClass
-#      AllocatedStorage: !Ref pDBAllocatedStorage
-#      VPCSecurityGroups:
-#      - !Ref rSecurityGroupRDS
-#      DBSubnetGroupName: !Ref rDBSubnetGroup
   rELBApp:
     Type: AWS::ElasticLoadBalancing::LoadBalancer
     DependsOn:
@@ -471,7 +446,7 @@ Resources:
       HealthCheck:
         HealthyThreshold: 2
         Interval: 15
-        Target: TCP:443
+        Target: TCP:8443
         Timeout: 5
         UnhealthyThreshold: 3
       AccessLoggingPolicy:
@@ -482,11 +457,11 @@ Resources:
       SecurityGroups:
       - !Ref rSecurityGroupApp
       Listeners:
-      - InstancePort: 80
+      - InstancePort: 8080
         LoadBalancerPort: 80
         Protocol: TCP
         InstanceProtocol: TCP
-      - InstancePort: 443
+      - InstancePort: 8443
         LoadBalancerPort: 443
         Protocol: TCP
         InstanceProtocol: TCP
@@ -831,8 +806,8 @@ Resources:
       - !Ref pDMZSubnetA
       - !Ref pDMZSubnetB
       LaunchConfigurationName: !Ref rAutoScalingConfigWeb
-      MinSize: 2
-      MaxSize: 4
+      MinSize: 1
+      MaxSize: 1
       LoadBalancerNames:
       - !Ref rELBWeb
       HealthCheckType: ELB
@@ -959,6 +934,27 @@ Resources:
                   - GovCloudCondition
                   - aws-us-gov
                   - aws
+            - !Sub
+              - arn:${Partition}:s3:::chiron-webapps
+              - Partition:
+                  !If
+                  - GovCloudCondition
+                  - aws-us-gov
+                  - aws
+            - !Sub
+              - arn:${Partition}:s3:::chiron-webapps/*
+              - Partition:
+                  !If
+                  - GovCloudCondition
+                  - aws-us-gov
+                  - aws
+            - !Sub
+              - arn:${Partition}:s3:::aws-codedeploy-us-east-2/*
+              - Partition:
+                  !If
+                  - GovCloudCondition
+                  - aws-us-gov
+                  - aws
           - Sid: DescribeVolumes
             Effect: Allow
             Action:
@@ -978,9 +974,8 @@ Resources:
     Metadata:
       AWS::CloudFormation::Init:
         configSets:
-          wordpress_install:
+          cfn_install:
           - install_cfn
-#          - install_wordpress
         install_cfn:
           files:
             /etc/cfn/cfn-hup.conf:
@@ -996,7 +991,7 @@ Resources:
                 [cfn-auto-reloader-hook]
                 triggers=post.update
                 path=Resources.rAutoScalingConfigApp.Metadata.AWS::CloudFormation::Init
-                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource rAutoScalingGroupApp --configsets wordpress_install --region ${AWS::Region}
+                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource rAutoScalingGroupApp --configsets cfn_install --region ${AWS::Region}
               mode: '000400'
               owner: root
               group: root
@@ -1008,56 +1003,6 @@ Resources:
                 files:
                 - /etc/cfn/cfn-hup.conf
                 - /etc/cfn/hooks.d/cfn-auto-reloader.conf
-        install_wordpress:
-          packages:
-            yum:
-              php: []
-              php-mysql: []
-              mysql: []
-              httpd: []
-#          sources:
-#            /var/www/html: https://wordpress.org/latest.tar.gz
-          files:
-            /tmp/httpd/ssl.conf:
-              content: |
-                Listen 443
-                <VirtualHost *:443>
-                DocumentRoot /var/www/html
-                LoadModule ssl_module /etc/httpd/modules/mod_ssl.so
-                SSLEngine on
-                SSLCertificateFile /etc/ssl/certs/common.crt
-                SSLCertificateKeyFile /etc/ssl/private/common.key
-                </VirtualHost>
-              mode: '000755'
-              owner: root
-              group: root
-#            /var/www/html/wordpress/wp-config.php:
-#              content: !Sub |
-#                <?php
-#                define('DB_NAME', '${pDBName}');
-#                define('DB_USER', '${pDBUser}');
-#                define('DB_PASSWORD', '${pDBPassword}');
-#                define('DB_HOST', '${rRDSInstanceMySQL.Endpoint.Address}');
-#                define('FORCE_SSL_ADMIN', true);
-#                if (strpos($_SERVER['HTTP_X_FORWARDED_PROTO'], 'https') !== false) { $_SERVER['HTTPS']='on'; }
-#                define('DB_CHARSET', 'utf8');
-#                define('DB_COLLATE', '');
-#
-#                $table_prefix = 'wp_';
-#                define('WP_DEBUG', false);
-#
-#                if ( !defined('ABSPATH') )
-#                  define('ABSPATH', dirname(__FILE__) . '/');
-
-#                require_once(ABSPATH . 'wp-settings.php');
-#              mode: '000644'
-#              owner: root
-#              group: root
-          services:
-            sysvinit:
-              httpd:
-                enabled: true
-                ensureRunning: true
     Properties:
       ImageId: !Ref pAppAmi
       IamInstanceProfile: !Ref rAppInstanceProfile
@@ -1079,16 +1024,31 @@ Resources:
 
             yum update -y
 
+            yum install -y ruby wget
+            wget https://aws-codedeploy-us-east-2.s3.amazonaws.com/latest/install
+            chmod +x ./install
+            ./install auto
+            service codedeploy-agent restart
+
             aws s3 cp s3://my-rx-bucket/scripts . --recursive --region us-east-1
             chmod +x *.sh *.py
-            ./provision.sh
 
+            yum -y install tomcat8 tomcat8-webapps tomcat8-admin-webapps tomcat8-docs-webapp
 
             yum -y install mod_ssl
 
             aws configure set default.s3.signature_version s3v4
             aws s3 cp s3://${rS3AssetsBucket}/ssl/common.crt /etc/ssl/certs/common.crt --region ${AWS::Region}
             aws s3 cp s3://${rS3AssetsBucket}/ssl/common.key /etc/ssl/private/common.key --region ${AWS::Region}
+
+            openssl pkcs12 -export -in /etc/ssl/certs/common.crt -inkey /etc/ssl/private/common.key -certfile /etc/ssl/certs/ca-bundle.crt -out tomcat.p12 -passout pass:changeit
+            cp tomcat.p12 /usr/share/tomcat8/conf/tomcat.p12
+
+            aws s3 cp s3://chiron-webapps/MyRxCheck.war /usr/share/tomcat8/webapps/ROOT.war
+
+            mv /usr/share/tomcat8/conf/server.xml /usr/share/tomcat8/conf/server.xml.old
+            cp server.xml /usr/share/tomcat8/conf/server.xml
+            service tomcat8 start
 
             EC2_INSTANCE_ID=$(curl -s http://instance-data/latest/meta-data/instance-id)
 
@@ -1119,35 +1079,9 @@ Resources:
             # Persist the volume in /etc/fstab so it gets mounted again
             echo '/dev/xvdh /data ext4 defaults,nofail 0 2' >> /etc/fstab
 
-            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource rAutoScalingConfigApp --configsets wordpress_install --region ${AWS::Region}
+            ./~/provision.sh
 
-            cp /tmp/httpd/ssl.conf /etc/httpd/conf.d/ssl.conf
-            service httpd restart
-
-            ######################################################################
-            #     NOTE: UPDATE THESE VALUES ACCORDING TO THE COMPLIANCE BODY     #
-            ######################################################################
-            LANDING_PAGE="/var/www/html/landing.html"
-            COMPLIANCE_BODY_LABEL="HIPAA"
-            COMPLIANCE_SURVEY_LINK="hipaa"
-            COMPLIANCE_MATRIX_FILENAME="HIPAA-Security-Controls-Mapping.xlsx"
-            ######################################################################
-
-            # Download the landing page.
-            sudo wget https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}assets/landing/landing.html -O $LANDING_PAGE
-
-            # Replace relative image links with links to the production S3 source.
-            sudo sed -i 's|images|https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}assets/landing/images|g' $LANDING_PAGE
-
-            # Inject the landing page branding label.
-            sudo sed -i "s|{compliance-body}|$COMPLIANCE_BODY_LABEL|g" $LANDING_PAGE
-
-            # Inject the survey link parameter.
-            sudo sed -i "s|{compliance-body-survey-link}|$COMPLIANCE_SURVEY_LINK|g" $LANDING_PAGE
-
-            # Inject the security control matrix file location.
-            sudo sed -i "s|{compliance-body-matrix}|https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}assets/$COMPLIANCE_MATRIX_FILENAME|g" $LANDING_PAGE
-
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource rAutoScalingConfigApp --configsets cfn_install --region ${AWS::Region}
             /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource rAutoScalingGroupApp --region ${AWS::Region}
           - QSS3Region:
               !If
@@ -1165,8 +1099,8 @@ Resources:
       - !Ref pAppPrivateSubnetA
       - !Ref pAppPrivateSubnetB
       LaunchConfigurationName: !Ref rAutoScalingConfigApp
-      MinSize: 2
-      MaxSize: 4
+      MinSize: 1
+      MaxSize: 1
       LoadBalancerNames:
       - !Ref rELBApp
       HealthCheckType: ELB
@@ -1272,62 +1206,13 @@ Resources:
             - ec2:TerminateInstances
             Resource:
             - '*'
-#  rPostProcInstanceProfile:
-#    Type: AWS::IAM::InstanceProfile
-#    Properties:
-#      Path: /
-#      Roles:
-#      - !Ref rPostProcInstanceRole
-#  rPostProcInstance:
-#    Type: AWS::EC2::Instance
-#    DependsOn:
-#    - rAutoScalingGroupApp
-#    - rAutoScalingGroupWeb
-#    Properties:
-#      ImageId: !Ref pWebServerAMI
-#      InstanceType: !Ref pAppInstanceType
-#      IamInstanceProfile: !Ref rPostProcInstanceProfile
-#      SubnetId: !Ref pAppPrivateSubnetA
-#      SecurityGroupIds:
-#      - !Ref rSecurityGroupAppInstance
-#      UserData:
-#        Fn::Base64: !Sub |
-#          #!/bin/bash -xe
-#
-#          echo Configure the region, necessary especially for GovCloud
-#          aws configure set region ${AWS::Region}
-#
-#          echo Send notification message...
-#          aws sns publish --topic-arn ${pSecurityAlarmTopic} \
-#            --subject "CloudFormation successfully launched ${AWS::StackName}" \
-#            --message \"What now? Click here for more information: https://${rELBWeb.DNSName}/landing.html. Please note that the application server might be finishing up its initialization. If the link doesn't respond right away, please try it again in few minutes. This page resides on an application server in your new environment." \
-#            --region ${AWS::Region}
-
-#          echo Sleeping for 2 minutes to allow CloudFormation to catch up
-#          sleep 120
-
-#          echo Self-destruct!
-#          aws ec2 terminate-instances --instance-id $(curl -s http://169.254.169.254/latest/meta-data/instance-id) --region ${AWS::Region}
-#      Tags:
-#      - Key: Name
-#        Value: PostProcessor
 Outputs:
-  LandingPageURL:
-    Value: !Sub https://${rELBWeb.DNSName}/landing.html
-    Description: Landing Page
   WebsiteURL:
-    Value: !Sub https://${rELBWeb.DNSName}/wordpress/wp-admin/install.php
-    Description: WordPress Website (demonstration purposes only)
+    Value: !Sub https://${rELBWeb.DNSName}/
+    Description: Website
   rSecurityGroupWeb:
     Value: !Ref rSecurityGroupWeb
   rSecurityGroupApp:
     Value: !Ref rSecurityGroupApp
   rSecurityGroupRDS:
     Value: !Ref rSecurityGroupRDS
-#  SurveyLink:
-#    Description: Please take a moment to complete the survey by clicking this link
-#    Value: https://aws.au1.qualtrics.com/SE/?SID=SV_55sYYdtY1NhTTgN&qs=${COMPLIANCE_SURVEY_LINK}
-#  Help:
-#    Description: For assistance or questions regarding this quickstart please email
-#      compliance-accelerator@amazon.com
-#    Value: ''

@@ -239,7 +239,8 @@ Mappings:
       InstanceTypeDatabase: db.m3.large
     us-east-1:
       AMZNLINUXHVM: ami-cfe4b2b0
-      InstanceType: m4.large
+      # InstanceType: m4.large
+      InstanceType: t2.micro
       InstanceTypeDatabase: db.m4.large
     us-east-2:
       AMZNLINUXHVM: ami-40142d25

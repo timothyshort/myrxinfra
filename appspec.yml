@@ -1,0 +1,22 @@
+version: 0.0
+os: linux
+files:
+  - source: /
+    destination: /tmp
+hooks:
+  AfterInstall:
+    - location: scripts/deployTomcat.sh
+      timeout: 300
+      runas: root
+  ApplicationStart:
+    - location: scripts/startTomcat.sh
+      timeout: 300
+      runas: root
+  ApplicationStop:
+    - location: scripts/stopTomcat.sh
+      timeout: 300
+      runas: root
+  ValidateService:
+    - location: scripts/validateApp.sh
+      timeout: 300
+      runas: root
