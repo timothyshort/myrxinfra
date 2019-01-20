@@ -43,6 +43,7 @@ source activate PySelPaM
 pip install pyvirtualdisplay==0.2
 pip install selenium==2.51.1
 pip install Pillow
+pip install pandas  # --DJ added pandas
 echo "FINISHED PREPARING CONDA ENVIRONMENT"
 
 echo "******************"

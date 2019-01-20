@@ -403,6 +403,10 @@ Resources:
       Domain: vpc
   AssociaterEIPProdBastion:
     Type: AWS::EC2::EIPAssociation
+    DependsOn:
+    - rMgmtBastionInstance
+    - rEIPProdBastion
+    - rENIProductionBastion
     Condition: cCreateBastionHost
     Properties:
       AllocationId: !GetAtt rEIPProdBastion.AllocationId
@@ -593,4 +597,3 @@ Outputs:
     Value: !Ref rEIPProdNAT
   rSecurityGroupSSHFromMgmt:
     Value: !Ref rSecurityGroupSSHFromMgmt
-...

@@ -18,7 +18,6 @@ Metadata:
     - Label:
         default: 'Please provide the following parameter values:'
       Parameters:
-#      - pDBPassword
       - pNotifyEmail
       - pEC2KeyPairBastion
       - pEC2KeyPair
@@ -31,8 +30,6 @@ Metadata:
       - QSS3BucketName
       - QSS3KeyPrefix
     ParameterLabels:
-#      pDBPassword:
-#        default: Database Password
       pNotifyEmail:
         default: Notification Email Address
       pEC2KeyPairBastion:
@@ -52,16 +49,6 @@ Metadata:
       QSS3KeyPrefix:
         default: Quick Start S3 Key Prefix
 Parameters:
-#  pDBPassword:
-#    Description: Mixed alphanumeric and must be between 8 and 28 characters and contain
-#      at least one capital letter
-#    NoEcho: true
-#    Type: String
-#    MinLength: 8
-#    MaxLength: 28
-#    AllowedPattern: '[a-zA-Z0-9!^*\-_+]*'
-#    ConstraintDescription: Can only contain alphanumeric characters or the following
-#      special characters !^*-_+, between 8 and 28 characters
   pNotifyEmail:
     Description: Notification email address for security events (you will receive
       a confirmation email)
@@ -244,7 +231,8 @@ Mappings:
       InstanceTypeDatabase: db.m4.large
     us-east-2:
       AMZNLINUXHVM: ami-40142d25
-      InstanceType: m4.large
+      # InstanceType: m4.large
+      InstanceType: t2.micro
       InstanceTypeDatabase: db.m4.large
     us-gov-west-1:
       AMZNLINUXHVM: ami-ffa61d9e
@@ -376,7 +364,7 @@ Resources:
           !If
           - LaunchAsDedicatedInstance
           - m4.large
-          - t2.small
+          - t2.micro
         pSupportsNatGateway:
           !FindInMap
           - RegionServiceSupport
@@ -503,23 +491,14 @@ Outputs:
     Value: Standard Multi-Tier Web Application
   TemplateVersion:
     Value: 2.0
-  #BastionIP:
-  #  Description: Use this IP via SSH to connect to Bastion Instance
-  #  Value:
-  #    !GetAtt
-  #    - ManagementVpcTemplate
-  #    - Outputs.rBastionInstanceIP
-  LandingPageURL:
+  BastionIP:
+    Description: Use this IP via SSH to connect to Bastion Instance
     Value:
       !GetAtt
-      - ApplicationTemplate
-      - Outputs.LandingPageURL
+      - ManagementVpcTemplate
+      - Outputs.rBastionInstanceIP
   WebsiteURL:
     Value:
       !GetAtt
       - ApplicationTemplate
       - Outputs.WebsiteURL
-#  Help:
-#    Description: For assistance or questions regarding this quickstart please email
-#      compliance-accelerator@amazon.com
-#    Value: ''

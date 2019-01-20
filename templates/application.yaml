@@ -242,6 +242,14 @@ Resources:
         FromPort: 443
         ToPort: 443
         CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 8080
+        ToPort: 8080
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 8443
+        ToPort: 8443
+        CidrIp: 0.0.0.0/0
       Tags:
       - Key: Name
         Value: sg-reverse-proxy-dmz
@@ -274,6 +282,14 @@ Resources:
         FromPort: 443
         ToPort: 443
         CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 8080
+        ToPort: 8080
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 8443
+        ToPort: 8443
+        CidrIp: 0.0.0.0/0
       - IpProtocol: udp
         FromPort: 123
         ToPort: 123
@@ -301,6 +317,14 @@ Resources:
       - IpProtocol: tcp
         FromPort: 80
         ToPort: 80
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 8443
+        ToPort: 8443
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 8080
+        ToPort: 8080
         CidrIp: 0.0.0.0/0
       Tags:
       - Key: Name
@@ -337,10 +361,11 @@ Resources:
       - IpProtocol: tcp
         FromPort: 8443
         ToPort: 8443
-        CidrIp: !Ref pProductionCIDR
+        CidrIp: 0.0.0.0/0
       - IpProtocol: tcp
         FromPort: 8080
         ToPort: 8080
+        CidrIp: 0.0.0.0/0
       - IpProtocol: tcp
         FromPort: 80
         ToPort: 80
@@ -969,7 +994,6 @@ Resources:
   rAutoScalingConfigApp:
     Type: AWS::AutoScaling::LaunchConfiguration
     DependsOn:
-  #  - rRDSInstanceMySQL
     - rPreProcInstance
     Metadata:
       AWS::CloudFormation::Init:
@@ -1024,30 +1048,25 @@ Resources:
 
             yum update -y
 
-            yum install -y ruby wget
+            yum install -y ruby wget tomcat8 tomcat8-webapps tomcat8-admin-webapps tomcat8-docs-webapp mod_ssl docker
             wget https://aws-codedeploy-us-east-2.s3.amazonaws.com/latest/install
             chmod +x ./install
             ./install auto
             service codedeploy-agent restart
 
-            aws s3 cp s3://my-rx-bucket/scripts . --recursive --region us-east-1
-            chmod +x *.sh *.py
-
-            yum -y install tomcat8 tomcat8-webapps tomcat8-admin-webapps tomcat8-docs-webapp
-
-            yum -y install mod_ssl
+            aws s3 cp s3://chiron-cf-templates/scripts /tmp --recursive --region us-east-2
+            cd /tmp && chmod +x *.sh *.py
 
             aws configure set default.s3.signature_version s3v4
             aws s3 cp s3://${rS3AssetsBucket}/ssl/common.crt /etc/ssl/certs/common.crt --region ${AWS::Region}
             aws s3 cp s3://${rS3AssetsBucket}/ssl/common.key /etc/ssl/private/common.key --region ${AWS::Region}
 
-            openssl pkcs12 -export -in /etc/ssl/certs/common.crt -inkey /etc/ssl/private/common.key -certfile /etc/ssl/certs/ca-bundle.crt -out tomcat.p12 -passout pass:changeit
-            cp tomcat.p12 /usr/share/tomcat8/conf/tomcat.p12
+            openssl pkcs12 -export -in /etc/ssl/certs/common.crt -inkey /etc/ssl/private/common.key -certfile /etc/ssl/certs/ca-bundle.crt -out /usr/share/tomcat8/conf/tomcat.p12 -passout pass:changeit
 
             aws s3 cp s3://chiron-webapps/MyRxCheck.war /usr/share/tomcat8/webapps/ROOT.war
-
+            rm -rf /usr/share/tomcat8/webapps/ROOT
             mv /usr/share/tomcat8/conf/server.xml /usr/share/tomcat8/conf/server.xml.old
-            cp server.xml /usr/share/tomcat8/conf/server.xml
+            cp /tmp/server.xml /usr/share/tomcat8/conf/server.xml
             service tomcat8 start
 
             EC2_INSTANCE_ID=$(curl -s http://instance-data/latest/meta-data/instance-id)
@@ -1079,7 +1098,7 @@ Resources:
             # Persist the volume in /etc/fstab so it gets mounted again
             echo '/dev/xvdh /data ext4 defaults,nofail 0 2' >> /etc/fstab
 
-            ./~/provision.sh
+            /tmp/provision.sh
 
             /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource rAutoScalingConfigApp --configsets cfn_install --region ${AWS::Region}
             /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource rAutoScalingGroupApp --region ${AWS::Region}
@@ -1091,6 +1110,15 @@ Resources:
   rAutoScalingGroupApp:
     Type: AWS::AutoScaling::AutoScalingGroup
     DependsOn: rAutoScalingConfigApp
+    CreationPolicy:
+      ResourceSignal:
+        Count: '1'
+        Timeout: PT15M
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: '1'
+        PauseTime: PT15M
+        WaitOnResourceSignals: 'true'
     Properties:
       AvailabilityZones:
       - !Ref pRegionAZ1Name
