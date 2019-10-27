@@ -708,9 +708,25 @@ Resources:
                 ssl_certificate_key /etc/ssl/private/common.key;
             /tmp/nginx/default.conf:
               content: !Sub |
+                # server {
+                #     listen 80;
+                #     charset utf-8;
+                #     location / {
+                #         resolver xxxxx;
+                #         set $elb 'https://${rELBApp.DNSName}';
+                #         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                #         proxy_set_header Host $http_host;
+                #         proxy_redirect off;
+                #         proxy_pass $elb;
+                #         proxy_connect_timeout 300;
+                #         proxy_send_timeout 300;
+                #         proxy_read_timeout 300;
+                #         send_timeout 300;
+                #     }
+                # }
                 server {
-                    listen 80;
-                    charset utf-8;
+                    listen 443 ssl http2 default_server;
+                    listen [::]:443 ssl http2 default_server;
                     location / {
                         resolver xxxxx;
                         set $elb 'https://${rELBApp.DNSName}';
@@ -722,18 +738,6 @@ Resources:
                         proxy_send_timeout 300;
                         proxy_read_timeout 300;
                         send_timeout 300;
-                    }
-                }
-                server {
-                    listen 443 ssl http2 default_server;
-                    listen [::]:443 ssl http2 default_server;
-                    location / {
-                        resolver xxxxx;
-                        set $elb 'https://${rELBApp.DNSName}';
-                        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                        proxy_set_header Host $http_host;
-                        proxy_redirect off;
-                        proxy_pass $elb;
                     }
                     include snippets/self-signed.conf;
                 }
